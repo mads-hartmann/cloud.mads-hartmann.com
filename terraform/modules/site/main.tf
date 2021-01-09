@@ -50,7 +50,16 @@ resource "aws_cloudfront_distribution" "distribution" {
     Project = var.domain
   }
 
-  # TODO: Are theese needed?
+  # CloudFront assigns a domain name to each distribution, such as d111111abcdef8.cloudfront.net
+  # If you want to use a custom domain like foobar.mydomain.com you have let CloudFront know
+  # which ones.
+  #
+  # You still have to create the DNS record, this just tells CloudFront what domain you expect
+  # to use.
+  #
+  # See official docs for more information:
+  # https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/CNAMEs.html
+  #
   aliases = [var.domain]
 
   # No restrictions - the site should be available everywhere
@@ -60,7 +69,24 @@ resource "aws_cloudfront_distribution" "distribution" {
     }
   }
 
-  # TODO: Describe
+  # For requests to the root of the URL, e.g.
+  #
+  # mydomain.com/
+  #
+  # we return the contents of
+  #
+  # mydomain.com/index.html
+  #
+  # This doesn't apply to subdirectories, e.g.
+  #
+  # example.mads-hartmann.com/subdirectory
+  #
+  # Does _not_ serve the contents of
+  #
+  # example.mads-hartmann.com/subdirectory/index.html
+  #
+  # TODO: What if you wanted that? Do you have to use a website bucket?
+  #
   default_root_object = "index.html"
 
   default_cache_behavior {
@@ -125,7 +151,31 @@ resource "aws_s3_bucket_policy" "policy" {
 # DNS - Route53
 #
 
-# TODO: Implement
+resource "aws_route53_record" "records" {
+
+  for_each = toset(["A", "AAAA"])
+
+  zone_id = var.route53_zone_id
+  name    = var.domain
+  type    = each.value
+
+  # We're using an alias record which are like CNAME records, but they can be
+  # assigned to top-level domaiins like mads-hartmann.com
+  #
+  # See offiicial docs for more information
+  # https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html
+  #
+  alias {
+    name    = aws_cloudfront_distribution.distribution.domain_name
+    zone_id = aws_cloudfront_distribution.distribution.hosted_zone_id
+
+    # We're using Simple Routing, e.g. not weighted, failover, geolocation or any
+    # of the more advanced features, so we don't need to evaluate the target health.
+    evaluate_target_health = false
+  }
+
+
+}
 
 #
 # IAM User for scripting deploys

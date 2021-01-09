@@ -1,4 +1,6 @@
-# aws
+# cloud.mads-hartmann.com
+
+How I manage my cloud resources for my own personal sites. As well as a few different experiments to better understand how various bits and pieces work in practice.
 
 ## Examples
 
