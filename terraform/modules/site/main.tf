@@ -148,6 +148,9 @@ resource "aws_cloudfront_distribution" "distribution" {
   # If the origin returns 403 (which s3 does if an object doesn't exist) then we try to serve the
   # 404.html page instead
   #
+  # TODO: This currently returns 404 if the waf blocks the request as the WAF returns a 403
+  #       Example: curl -A '' https://example.mads-hartmann.com
+  #
   # TODO: This assumes that there is a 404.html page in the bucket, so perhaps
   #       we should make this an input variable instead.
   custom_error_response {
