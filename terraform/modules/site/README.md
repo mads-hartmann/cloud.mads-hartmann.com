@@ -28,6 +28,7 @@ This will create the following resources:
   - Lambda@edge function to serve index.html for subdirectories
 - Alias record for domain
 - WAF
+- A user and associated access key for uploading new files and invalidating the cache.
 
 ## Implementation
 

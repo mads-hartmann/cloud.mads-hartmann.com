@@ -193,12 +193,20 @@ resource "aws_cloudfront_distribution" "distribution" {
     # I use HTTPS for all my sites.
     viewer_protocol_policy = "redirect-to-https"
 
-    # TODO:
-    # - Only 0 while debugging lambda code
-    # - I should pick the default values otherwise, but hard-code them.
-    min_ttl     = 0
-    default_ttl = 0
-    max_ttl     = 0
+    # Setting the TTL for the distribtuion.
+    #
+    # I have explictily set the TTL to be the default values that CloudFront uses.
+    # I have put them in explicitly as you might wan to temporarily set all of
+    # them to 0 if you're debugging the Lambda@Edge function.
+    #
+    # The TTL can be configured for individual objects by setting `cache-control` and `expires`
+    # when uploading files to the bucket. If you don't specify one it will use default_ttf. If
+    # you do specify one CloudFront will override with the min/max below if you don't stay within
+    # the range.
+    #
+    min_ttl     = 0        # 0 seconds
+    default_ttl = 86400    # 1 day
+    max_ttl     = 31536000 # 1 year
   }
 
   # Enable all edge locations.
@@ -299,7 +307,7 @@ resource "aws_lambda_function" "routing" {
 #
 
 resource "aws_wafv2_web_acl" "web_acl" {
-  name        = "${local.hyphened_domain}"
+  name        = local.hyphened_domain
   description = "WAF for ${var.domain}"
   scope       = "CLOUDFRONT"
 
@@ -482,6 +490,53 @@ resource "aws_route53_record" "records" {
 #
 # IAM User for scripting deploys
 #
+# The user is granted permissions to create/update and delete objects in the bucket
+# and invalidate the CloudFront cache.
+#
+# ListBucket is needed when you use the sync command.
+#
 
-# TODO: Uploading to S3 bucket
-# TODO: Invalidating CloudFront cache
+resource "aws_iam_user" "deploy" {
+  name = "${local.hyphened_domain}-deploy"
+  tags = local.tags
+}
+
+resource "aws_iam_user_policy" "policy" {
+  name = "${local.hyphened_domain}-policy"
+  user = aws_iam_user.deploy.name
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Effect": "Allow",
+      "Resource": "${aws_s3_bucket.bucket.arn}/*"
+    },
+    {
+      "Action": [
+        "s3:ListBucket"
+      ],
+      "Effect": "Allow",
+      "Resource": "${aws_s3_bucket.bucket.arn}"
+    },
+    {
+      "Action": [
+        "cloudfront:CreateInvalidation"
+      ],
+      "Effect": "Allow",
+      "Resource": "${aws_cloudfront_distribution.distribution.arn}"
+    }
+  ]
+}
+EOF
+}
+
+# Generate an access key for the user so we get programmatic access.
+resource "aws_iam_access_key" "access_key" {
+  user = aws_iam_user.deploy.name
+}
