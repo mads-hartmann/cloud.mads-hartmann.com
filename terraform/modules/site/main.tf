@@ -1,21 +1,21 @@
 locals {
-  # TODO: What is this?
+  # Origin ID for the CloudFront distribution.
   s3_origin_id = "site-${var.domain}"
 
-  # Some atributes can't have . in the name, so in those cases
-  # we'll use this instead. Example:
+  # Some attributes can't have . in the name, so in those cases we'll use this instead. Example:
   #
-  #   example.mads-hartmann.com becomes
+  #   example.mads-hartmann.com
   #
   # becomes:
   #
   #   example-mads-hartmann-com
+  #
   hyphened_domain = replace(var.domain, ".", "-")
 
   # Path to zip file for the lambda.
   lambda_zip_path = "${path.module}/lambda/routing.js.zip"
 
-  # Share tags between resources
+  # Common tags to apply to resources - useful for grouping expenses in the cost explorer.
   tags = {
     Name    = var.domain
     Project = var.domain
@@ -32,9 +32,49 @@ resource "aws_s3_bucket" "bucket" {
 
   tags = local.tags
 
-  # No need for versioning.
+  # We don't need versioning - the contents of the bucket are already
+  # stored in git, so adding versioning just adds extra cost and complexity.
   versioning {
     enabled = false
+  }
+}
+
+#
+# Ensure the bucket it completely private.
+#
+resource "aws_s3_bucket_public_access_block" "public_access_block" {
+  bucket = aws_s3_bucket.bucket.id
+
+  # Disallow updating the ACLs to public for the bucket or objects in it
+  block_public_acls = true
+
+  # If the bucket or any objects in it were already public, disallow public access anyway.
+  ignore_public_acls = true
+
+  # Disallow setting the bucket policy if the specified bucket policy allows public access
+  block_public_policy = true
+
+  # Even if the bucket is public, only allow access to it from AWS service principals and
+  # authorized users
+  restrict_public_buckets = true
+}
+
+# Give our CloudFront distribution access using an origin access identity
+# which we give read-only access to the bucket below
+resource "aws_s3_bucket_policy" "policy" {
+  bucket = aws_s3_bucket.bucket.id
+  policy = data.aws_iam_policy_document.readonly.json
+}
+
+data "aws_iam_policy_document" "readonly" {
+  statement {
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.bucket.arn}/*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = [aws_cloudfront_origin_access_identity.origin_access_identity.iam_arn]
+    }
   }
 }
 
@@ -43,7 +83,7 @@ resource "aws_s3_bucket" "bucket" {
 #
 
 resource "aws_cloudfront_origin_access_identity" "origin_access_identity" {
-  comment = "Read-only access to the S3 buckett from CloudFront"
+  comment = "Read-only access to the S3 bucket from CloudFront"
 }
 
 resource "aws_cloudfront_distribution" "distribution" {
@@ -64,7 +104,7 @@ resource "aws_cloudfront_distribution" "distribution" {
   tags = local.tags
 
   # CloudFront assigns a domain name to each distribution, such as d111111abcdef8.cloudfront.net
-  # If you want to use a custom domain like foobar.mydomain.com you have let CloudFront know
+  # If you want to use a custom domain like example.mads-hartmann.com you have let CloudFront know
   # which ones.
   #
   # You still have to create the DNS record, this just tells CloudFront what domain you expect
@@ -84,11 +124,11 @@ resource "aws_cloudfront_distribution" "distribution" {
 
   # For requests to the root of the URL, e.g.
   #
-  # mydomain.com/
+  # example.mads-hartmann.com/
   #
   # we return the contents of
   #
-  # mydomain.com/index.html
+  # example.mads-hartmann/index.html
   #
   # This doesn't apply to subdirectories, e.g.
   #
@@ -98,12 +138,12 @@ resource "aws_cloudfront_distribution" "distribution" {
   #
   # example.mads-hartmann.com/subdirectory/index.html
   #
-  # To make that work, we use the Lambda@edge
+  # To make that work, we use the Lambda@edge, see the lambda_function_association below.
   #
   default_root_object = "index.html"
 
-  # If the origin returns 403 (which s3 does if an object doesn't exist)
-  # then we try to serve the 404.html page instead
+  # If the origin returns 403 (which s3 does if an object doesn't exist) then we try to serve the
+  # 404.html page instead
   #
   # TODO: This assumes that there is a 404.html page in the bucket, so perhaps
   #       we should make this an input variable instead.
@@ -115,17 +155,18 @@ resource "aws_cloudfront_distribution" "distribution" {
   }
 
   default_cache_behavior {
-    # All methods are allowed
-    # TODO: For a static site, we probably only want GET/HEAD/OPTIONS
-    allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    # As were just serving static content, there's no reason to allow
+    # DELETE, PUT, POST, PATCH
+    allowed_methods = ["GET", "HEAD", "OPTIONS"]
 
     # We only cache GET and HEAD
     cached_methods = ["GET", "HEAD"]
 
     target_origin_id = local.s3_origin_id
 
+    # Invoke the lambda function before CloudFront forwards requests to the origin (origin-request)
+    # The lambda takes care of re-writing requests to use /index.html for subdirectories.
     lambda_function_association {
-      # Invoke the lambda before CloudFront forwards a request to the origin (origin request)
       event_type   = "origin-request"
       lambda_arn   = aws_lambda_function.routing.qualified_arn
       include_body = false
@@ -148,14 +189,15 @@ resource "aws_cloudfront_distribution" "distribution" {
 
     # TODO:
     # - Only 0 while debugging lambda code
-    # - I should pick the default values otherwise, but hardcode them.
+    # - I should pick the default values otherwise, but hard-code them.
     min_ttl     = 0
     default_ttl = 0
     max_ttl     = 0
   }
 
-  # TODO
-  price_class = "PriceClass_200"
+  # Enable all edge locations.
+  # My sites are so low traffic that this really won't make a difference in my bill
+  price_class = "PriceClass_All"
 
   # Use the SSL certificate provided.
   viewer_certificate {
@@ -164,28 +206,6 @@ resource "aws_cloudfront_distribution" "distribution" {
     # This is recommended by AWS.
     ssl_support_method = "sni-only"
   }
-}
-
-#
-#
-#
-
-data "aws_iam_policy_document" "s3_readony_policy_document" {
-  statement {
-    actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.bucket.arn}/*"]
-
-    # TODO: Describe what principals are
-    principals {
-      type        = "AWS"
-      identifiers = [aws_cloudfront_origin_access_identity.origin_access_identity.iam_arn]
-    }
-  }
-}
-
-resource "aws_s3_bucket_policy" "policy" {
-  bucket = aws_s3_bucket.bucket.id
-  policy = data.aws_iam_policy_document.s3_readony_policy_document.json
 }
 
 #
@@ -279,9 +299,9 @@ resource "aws_route53_record" "records" {
   type    = each.value
 
   # We're using an alias record which are like CNAME records, but they can be
-  # assigned to top-level domaiins like mads-hartmann.com
+  # assigned to top-level domains like mads-hartmann.com
   #
-  # See offiicial docs for more information
+  # See official docs for more information
   # https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html
   #
   alias {

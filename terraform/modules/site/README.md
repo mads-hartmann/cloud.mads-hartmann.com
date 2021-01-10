@@ -1,32 +1,31 @@
 # Site
 
-A terraform module for creating a simple static site that's stored on S3 and served by CloudFront.
+A terraform module for creating a simple static site that's stored on S3 and served by CloudFront. This can be achieved in many different ways in AWS, I wanted to achieve the following:
 
-Features
+- It should serve `index.html` in the root  
+  That is, `example.mads-hartmann.com` should serve `example.mads-hartmann.com/index.html`. CloudFront allows this by setting `default_root_object`.
 
-- It should serve index.html in the root (CF allows this by setting default_root_object)
-- It should serve index.html in subdirectories (CF doesn't allow this, so this was achieved by associating a lambda@edge function with CF which does the request re-writing)
-- It should show a 404 page when requesting a resource that doesn't exist (achieved using CF custom error responses)
+- It should serve `index.html` in subdirectories  
+  CloudFront doesn't support this out of the box as `default_root_object` only applies to the root. This has been achieved by associating a Lambda@Edge function with CloudFront distribution which does the request re-writing - this is the only way to achieve if you you want to keep the bucket contents truly private, more details below.
+
+- It should serve `404.html` when requesting a resource that doesn't exist  
+  This has been achieved by using a [Custom Error Response](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/GeneratingCustomErrorResponses.html) which turns 403's from S3 into 404's and serves the `404.html` page.
+
+- The S3 bucket should __only__ be reachable through CloudFront  
+  The bucket is private, the CloudFront distribution has been configured to use a [Origin Access Identity (OAI)](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html) which has been grated read-only access to the bucket. Additionally, the bucket has been configured with [Amazon S3 Block Public Access](https://docs.aws.amazon.com/AmazonS3/latest/dev/access-control-block-public-access.html) so that the bucket or objects in it can't ever be made public.
+
 - TODO: It should have basic DOS prevention (achieved by associating a WAF with CF)
 - TODO: It should be possible to get viewing statistics
 - TODO: Cost calculator for the site
 
-Goals
-
-- The S3 bucket should be completely private - a pure implementation detail - it shouldn't be possible to reach the content without going through CF.
-
-Resources
+This will create the following resources:
 
 - A private S3 bucket for hosting the static files
-- An [Origin Access Identity (OAI)](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html) to give CloudFront access to the S3 bucket.
+    - An Origin Access Identity (OAI) to give CloudFront access to the S3 bucket.
 - A CloudFront distribution for serving and caching the contents in s3
+    - Lambda@edge function to serve index.html for subdirectories
 - Alias record for domain
-- Lambda@edge function to serve index.html for subdirectories
 - WAF
-
-## TODOs
-
-- [ ] Consider using [aws_s3_bucket_public_access_block](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block) to really ensure that nothing in the bucket can be public.
 
 ## Implementation
 
