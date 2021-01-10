@@ -14,16 +14,18 @@ A terraform module for creating a simple static site that's stored on S3 and ser
 - The S3 bucket should __only__ be reachable through CloudFront  
   The bucket is private, the CloudFront distribution has been configured to use a [Origin Access Identity (OAI)](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html) which has been grated read-only access to the bucket. Additionally, the bucket has been configured with [Amazon S3 Block Public Access](https://docs.aws.amazon.com/AmazonS3/latest/dev/access-control-block-public-access.html) so that the bucket or objects in it can't ever be made public.
 
-- TODO: It should have basic DOS prevention (achieved by associating a WAF with CF)
+- It should have basic attack prevention  
+  We have created a WAF Web ACL in front of CloudFront. The WAF has been configured to block IP addresses that have [identified as malicious actors and bots by Amazon threat intelligence (AWSManagedRulesAmazonIpReputationList)](https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-list.html#aws-managed-rule-groups-ip-rep), as well as a general rate-based rule based on IP addresses.
+
 - TODO: It should be possible to get viewing statistics
 - TODO: Cost calculator for the site
 
 This will create the following resources:
 
 - A private S3 bucket for hosting the static files
-    - An Origin Access Identity (OAI) to give CloudFront access to the S3 bucket.
+  - An Origin Access Identity (OAI) to give CloudFront access to the S3 bucket.
 - A CloudFront distribution for serving and caching the contents in s3
-    - Lambda@edge function to serve index.html for subdirectories
+  - Lambda@edge function to serve index.html for subdirectories
 - Alias record for domain
 - WAF
 
@@ -44,4 +46,4 @@ This will create the following resources:
 
 - [Implementing Default Directory Indexes in Amazon S3-backed Amazon CloudFront Origins Using Lambda@Edge](https://aws.amazon.com/blogs/compute/implementing-default-directory-indexes-in-amazon-s3-backed-amazon-cloudfront-origins-using-lambdaedge/)
 - [Restricting Access to Amazon S3 Content by Using an Origin Access Identity](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html)
-- https://github.com/twstewart42/terraform-aws-cloudfront-s3-website-lambda-edge (similar implementation)
+- <https://github.com/twstewart42/terraform-aws-cloudfront-s3-website-lambda-edge> (similar implementation)

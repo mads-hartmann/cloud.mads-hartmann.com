@@ -96,6 +96,9 @@ resource "aws_cloudfront_distribution" "distribution" {
     }
   }
 
+  # Use the firewell we've created
+  web_acl_id = aws_wafv2_web_acl.web_acl.arn
+
   enabled         = true
   is_ipv6_enabled = true
 
@@ -224,7 +227,9 @@ resource "aws_iam_role_policy" "log_policy" {
 
   #
   # For the log groups:
-  # In a nutshell, these are the permissions that the function needs to create the necessary CloudWatch log group and log stream, and to put the log events so that the function is able to write logs when it executes.
+  # In a nutshell, these are the permissions that the function needs to create the necessary
+  # CloudWatch log group and log stream, and to put the log events so that the function is
+  # able to write logs when it executes.
   #
   policy = <<EOF
 {
@@ -287,6 +292,163 @@ resource "aws_lambda_function" "routing" {
 }
 
 #
+# Firewall - WAF
+#
+
+resource "aws_wafv2_web_acl" "web_acl" {
+  name        = "${local.hyphened_domain}"
+  description = "WAF for ${var.domain}"
+  scope       = "CLOUDFRONT"
+
+  # By default we want to allow all requests
+  default_action {
+    allow {}
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "WAF-${local.hyphened_domain}"
+    sampled_requests_enabled   = true
+  }
+
+  # Block IP addresses that have identified as malicious actors and bots by Amazon threat intelligence.
+  #
+  # > The Amazon IP reputation list rule group contains rules that are based on Amazon internal
+  # > threat intelligence. This is useful if you would like to block IP addresses typically
+  # > associated with bots or other threats.
+  #
+  # https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-list.html#aws-managed-rule-groups-ip-rep
+  #
+  rule {
+    name     = "AWS-AWSManagedRulesAmazonIpReputationList"
+    priority = 1
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesAmazonIpReputationList"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.hyphened_domain}-AWSManagedRulesAmazonIpReputationList"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Block common explots:
+  #
+  # > The 'Core rule set (CRS)' rule group contains rules that are generally applicable to web applications.
+  # > This provides protection against exploitation of a wide range of vulnerabilities, including high risk and
+  # > commonly occurring vulnerabilities described in OWASP publications.
+  #
+  # https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-list.html#aws-managed-rule-groups-baseline
+  #
+  rule {
+    name     = "AWS-AWSManagedRulesCommonRuleSet"
+    priority = 2
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.hyphened_domain}-AWSManagedRulesCommonRuleSet"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Block any IP that sends more than 600 requests per 5 minutes (2 req/sec) for a proloned duration
+  # (TODO: How long do you have to keep sending them for it to block?)
+  #
+  # This only counts request where the x-forwarded-for header isn't set. This is to avoid
+  # accidentially blocking requests that are coming from a proxy.
+  #
+  # We have a seaprate rule for blocking based on x-forwarded-for below.
+  #
+  rule {
+    name     = "rate-limit-src-ip-600"
+    priority = 3
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit              = 600
+        aggregate_key_type = "IP"
+        scope_down_statement {
+          not_statement {
+            statement {
+              size_constraint_statement {
+                comparison_operator = "GT"
+                size                = 0
+                field_to_match {
+                  single_header {
+                    name = "x-forwarded-for"
+                  }
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.hyphened_domain}-rate-limit-src-ip-600"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "rate-limit-xff-ip-600"
+    priority = 4
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit              = 600
+        aggregate_key_type = "FORWARDED_IP"
+        forwarded_ip_config {
+          header_name       = "X-Forwarded-For"
+          fallback_behavior = "MATCH"
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.hyphened_domain}-rate-limit-xff-ip-600"
+      sampled_requests_enabled   = true
+    }
+  }
+
+}
+
+#
 # DNS - Route53
 #
 
@@ -316,12 +478,6 @@ resource "aws_route53_record" "records" {
 
 #
 # IAM User for scripting deploys
-#
-
-# TODO
-
-#
-# Basic WAF protection
 #
 
 # TODO: Uploading to S3 bucket
