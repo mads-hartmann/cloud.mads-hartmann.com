@@ -226,12 +226,33 @@ resource "aws_cloudfront_distribution" "distribution" {
 # Routing - Lambda
 #
 
-data "archive_file" "lambda" {
-  type        = "zip"
-  output_path = local.lambda_zip_path
-  source_file = "${path.module}/lambda/routing.js"
+# Create an IAM role and grant Lambda and Lambda@Edge the permission to
+# assume the role.
+resource "aws_iam_role" "lambda" {
+  name        = "${local.hyphened_domain}-lambda-role"
+  description = "Role for ${local.hyphened_domain}"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": [
+          "lambda.amazonaws.com",
+          "edgelambda.amazonaws.com"
+        ]
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
 }
 
+# Assign policies to the role.
 resource "aws_iam_role_policy" "log_policy" {
   name = "${local.hyphened_domain}-lambda-log-policy"
   role = aws_iam_role.lambda.id
@@ -260,31 +281,14 @@ resource "aws_iam_role_policy" "log_policy" {
 EOF
 }
 
-# TODO: Describe why it needs the assume role
-resource "aws_iam_role" "lambda" {
-  name        = "${local.hyphened_domain}-lambda-assume-role"
-  description = "TODO"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": [
-          "lambda.amazonaws.com",
-          "edgelambda.amazonaws.com"
-        ]
-      },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
+# Create a zip archive for the lambda source code
+data "archive_file" "lambda" {
+  type        = "zip"
+  output_path = local.lambda_zip_path
+  source_file = "${path.module}/lambda/routing.js"
 }
 
+# Create the lambda function.
 resource "aws_lambda_function" "routing" {
   filename         = local.lambda_zip_path
   source_code_hash = data.archive_file.lambda.output_base64sha256
@@ -292,9 +296,11 @@ resource "aws_lambda_function" "routing" {
   function_name = "${local.hyphened_domain}-routing"
   handler       = "routing.handler"
 
+  # The role we want to Lambda to assume (its execution role)
   role = aws_iam_role.lambda.arn
 
-  # TODO: What does this mean?
+  # TODO: Having this to true means publishing a new version of the lambda
+  # TODO: What happens if you set it to false? Does it re-create?
   publish = true
 
   runtime = "nodejs12.x"
