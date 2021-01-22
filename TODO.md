@@ -1,6 +1,7 @@
 ### Site
 
 - [ ] How do I test IPV6?
+- [ ] How would I go about getting distributed traces from CloudFront, WAF, and Lambda?
 
 ### Lambda
 

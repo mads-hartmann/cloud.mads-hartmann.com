@@ -30,9 +30,19 @@ This will create the following resources:
 - WAF
 - A user and associated access key for uploading new files and invalidating the cache.
 
+## Usage
+
+__The provider has to be us-east-1, as that's a requirement for cloudfront and associated resources.__
+
+```terraform
+
+```
+
 ## Implementation
 
 ### Why not use CNAME directly to S3 website-enabled bucket
+
+<!-- CloudFront adds features like HTTPS on your own domain name, redirecting clients from HTTP to HTTPS, IPv6, HTTP/2, and caching. -->
 
 - I want caching (which CloudFront provides)
 - I want a WAF for basic protection against attacks
