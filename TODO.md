@@ -1,7 +1,6 @@
 ### Site
 
-- [ ] How do I test IPV6?
-- [ ] How would I go about getting distributed traces from CloudFront, WAF, and Lambda?
+See [terraform/modules/site/TODO.md](./terraform/modules/site/TODO.md)
 
 ### Lambda
 
