@@ -33,3 +33,15 @@ output "computer-mads-hartmann-com-deploy-access-key-id" {
 output "computer-mads-hartmann-com-deploy-access-key-secret" {
   value = module.computer-mads-hartmann-com.access_key.secret
 }
+
+output "links-mads-hartmann-com-distribution-id" {
+  value = module.links-mads-hartmann-com.distribution_id
+}
+
+output "links-mads-hartmann-com-deploy-access-key-id" {
+  value = module.links-mads-hartmann-com.access_key.id
+}
+
+output "links-mads-hartmann-com-deploy-access-key-secret" {
+  value = module.links-mads-hartmann-com.access_key.secret
+}
