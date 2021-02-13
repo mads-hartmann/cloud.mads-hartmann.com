@@ -45,3 +45,15 @@ output "links-mads-hartmann-com-deploy-access-key-id" {
 output "links-mads-hartmann-com-deploy-access-key-secret" {
   value = module.links-mads-hartmann-com.access_key.secret
 }
+
+output "blog-mads-hartmann-com-distribution-id" {
+  value = module.blog-mads-hartmann-com.distribution_id
+}
+
+output "blog-mads-hartmann-com-deploy-access-key-id" {
+  value = module.blog-mads-hartmann-com.access_key.id
+}
+
+output "blog-mads-hartmann-com-deploy-access-key-secret" {
+  value = module.blog-mads-hartmann-com.access_key.secret
+}

@@ -88,3 +88,14 @@ module "links-mads-hartmann-com" {
     aws = aws.us-east-1
   }
 }
+
+module "blog-mads-hartmann-com" {
+  source              = "../modules/site"
+  domain              = "blog.mads-hartmann.com"
+  acm_certificate_arn = local.acm_certificate_arn
+  route53_zone_id     = local.route53_zone_id
+
+  providers = {
+    aws = aws.us-east-1
+  }
+}
