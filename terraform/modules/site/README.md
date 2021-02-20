@@ -1,5 +1,7 @@
 # Site
 
+<img src="./docs/diagram.drawio.svg">
+
 A terraform module for creating a simple static site that's stored on S3 and served by CloudFront. This can be achieved in many different ways in AWS, I wanted to achieve the following:
 
 - It should serve `index.html` in the root  
