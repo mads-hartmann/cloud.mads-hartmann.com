@@ -26,8 +26,8 @@ This will create the following resources:
 - A CloudFront distribution for serving and caching the contents in S3
   - An Origin Access Identity (OAI) to give CloudFront access to the S3 bucket.
   - A Lambda@edge function to perform request re-writing to serve index.html for subdirectories
+  - A WAF ACL with some AWS managed rules as well as ip-based rate-limiting
 - A Route53 Alias DNS record for the domain that points to the CloudFront distribution.
-- WAF
 - An IAM User and associated access key for uploading new files and invalidating the cache; this is to decouple provisioning from deploys.
 
 ## Usage
