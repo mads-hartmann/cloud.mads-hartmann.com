@@ -22,12 +22,13 @@ A terraform module for creating a simple static site that's stored on S3 and ser
 This will create the following resources:
 
 - A private S3 bucket for hosting the static files
+  - A [Amazon S3 Block Public Access](https://docs.aws.amazon.com/AmazonS3/latest/dev/access-control-block-public-access.html) rule to make sure bucket and its content is really private.
+- A CloudFront distribution for serving and caching the contents in S3
   - An Origin Access Identity (OAI) to give CloudFront access to the S3 bucket.
-- A CloudFront distribution for serving and caching the contents in s3
-  - Lambda@edge function to serve index.html for subdirectories
-- Alias record for domain
+  - A Lambda@edge function to perform request re-writing to serve index.html for subdirectories
+- A Route53 Alias DNS record for the domain that points to the CloudFront distribution.
 - WAF
-- A user and associated access key for uploading new files and invalidating the cache.
+- An IAM User and associated access key for uploading new files and invalidating the cache; this is to decouple provisioning from deploys.
 
 ## Usage
 
