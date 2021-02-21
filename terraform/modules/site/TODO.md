@@ -3,4 +3,3 @@
 - [ ] Verify in the AWS cost explorer that I've tagged everything correctly
 - [ ] How do I test IPV6?
 - [ ] How would I go about getting distributed traces from CloudFront, WAF, and Lambda?
-- [ ] Right now it isn't possible to return a 403 page when the WAF blocks a request. These are currently translated into 404 pages because the S3 origin returns 403 if an object doesn't exist. See if it's possible to return 403 when the WAF blocks a request.
