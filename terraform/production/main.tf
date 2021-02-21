@@ -31,7 +31,7 @@ locals {
   route53_zone_id     = "Z18NSONI21UYAE"
 }
 
-module "aws-mads-hartmann-com" {
+module "example-mads-hartmann-com" {
   source              = "../modules/site"
   domain              = "example.mads-hartmann.com"
   acm_certificate_arn = local.acm_certificate_arn

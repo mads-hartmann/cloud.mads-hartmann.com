@@ -14,6 +14,8 @@
  *
  */
 exports.handler = (event, context, callback) => {
+  // Example origin request payload
+  // https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/lambda-event-structure.html#example-origin-request
   const request = event.Records[0].cf.request;
 
   // The root request doesn't need re-writing, that's already handled

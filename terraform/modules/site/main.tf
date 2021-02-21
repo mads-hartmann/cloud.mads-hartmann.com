@@ -12,8 +12,9 @@ locals {
   #
   hyphened_domain = replace(var.domain, ".", "-")
 
-  # Path to zip file for the lambda.
-  lambda_zip_path = "${path.module}/lambda/routing.js.zip"
+  # Path to zip files for the lambda@edge functions.
+  lambda_origin_request_zip_path  = "${path.module}/lambda/origin-request.js.zip"
+  lambda_origin_response_zip_path = "${path.module}/lambda/origin-response.js.zip"
 
   # Common tags to apply to resources - useful for grouping expenses in the cost explorer.
   tags = {
@@ -145,16 +146,28 @@ resource "aws_cloudfront_distribution" "distribution" {
   #
   default_root_object = "index.html"
 
-  # If the origin returns 403 (which s3 does if an object doesn't exist) then we try to serve the
-  # 404.html page instead
+
+  # Show a custom 403 page
   #
-  # TODO: This currently returns 404 if the waf blocks the request as the WAF returns a 403
-  #       Example: curl -A '' https://example.mads-hartmann.com
+  # If the WAF blocks a request we want to show a custom 403 page.
+  #
+  # This can be triggered by not sending a user-agent: curl --user-agent '' https://example.mads-hartmann.com
+  #
+  # TODO: This assumes that there is a 403.html page in the bucket, so perhaps
+  #       we should make this an input variable instead.
+  custom_error_response {
+    error_code            = 403
+    response_code         = 403
+    error_caching_min_ttl = 0
+    response_page_path    = "/403.html"
+  }
+
+  # Show a custom 404 page
   #
   # TODO: This assumes that there is a 404.html page in the bucket, so perhaps
   #       we should make this an input variable instead.
   custom_error_response {
-    error_code            = 403
+    error_code            = 404
     response_code         = 404
     error_caching_min_ttl = 0
     response_page_path    = "/404.html"
@@ -174,7 +187,15 @@ resource "aws_cloudfront_distribution" "distribution" {
     # The lambda takes care of re-writing requests to use /index.html for subdirectories.
     lambda_function_association {
       event_type   = "origin-request"
-      lambda_arn   = aws_lambda_function.routing.qualified_arn
+      lambda_arn   = aws_lambda_function.origin_request.qualified_arn
+      include_body = false
+    }
+
+    # Invoke the lambda function after CloudFront has gotten a response from the origin (origin-response)
+    # The lambda takes care of turning 403s into 404s. S3 will return 403 if the object doesn't exist.
+    lambda_function_association {
+      event_type   = "origin-response"
+      lambda_arn   = aws_lambda_function.origin_response.qualified_arn
       include_body = false
     }
 
@@ -282,25 +303,49 @@ EOF
 }
 
 # Create a zip archive for the lambda source code
-data "archive_file" "lambda" {
+data "archive_file" "origin_request_lambda" {
   type        = "zip"
-  output_path = local.lambda_zip_path
-  source_file = "${path.module}/lambda/routing.js"
+  output_path = local.lambda_origin_request_zip_path
+  source_file = "${path.module}/lambda/origin-request.js"
 }
 
-# Create the lambda function.
-resource "aws_lambda_function" "routing" {
-  filename         = local.lambda_zip_path
-  source_code_hash = data.archive_file.lambda.output_base64sha256
+data "archive_file" "origin_response_lambda" {
+  type        = "zip"
+  output_path = local.lambda_origin_response_zip_path
+  source_file = "${path.module}/lambda/origin-response.js"
+}
 
-  function_name = "${local.hyphened_domain}-routing"
-  handler       = "routing.handler"
+# Create the origin-request lambda@edge function.
+resource "aws_lambda_function" "origin_request" {
+  filename         = local.lambda_origin_request_zip_path
+  source_code_hash = data.archive_file.origin_request_lambda.output_base64sha256
+
+  function_name = "${local.hyphened_domain}-origin-request"
+  handler       = "origin-request.handler"
 
   # The role we want to Lambda to assume (its execution role)
   role = aws_iam_role.lambda.arn
 
-  # TODO: Having this to true means publishing a new version of the lambda
-  # TODO: What happens if you set it to false? Does it re-create?
+  # It seems that CloudFront needs the lambda to be versioned.
+  publish = true
+
+  runtime = "nodejs12.x"
+
+  tags = local.tags
+}
+
+# Create the origin-response lambda@edge function.
+resource "aws_lambda_function" "origin_response" {
+  filename         = local.lambda_origin_response_zip_path
+  source_code_hash = data.archive_file.origin_response_lambda.output_base64sha256
+
+  function_name = "${local.hyphened_domain}-origin-response"
+  handler       = "origin-response.handler"
+
+  # The role we want to Lambda to assume (its execution role)
+  role = aws_iam_role.lambda.arn
+
+  # It seems that CloudFront needs the lambda to be versioned.
   publish = true
 
   runtime = "nodejs12.x"
