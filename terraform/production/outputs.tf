@@ -10,6 +10,10 @@ output "example-mads-hartmann-com-deploy-access-key-secret" {
   value = module.example-mads-hartmann-com.access_key.secret
 }
 
+output "example-api-mads-hartmann-com-endpoint" {
+  value = module.example-api-mads-hartmann-com.endpoint
+}
+
 output "library-mads-hartmann-com-distribution-id" {
   value = module.library-mads-hartmann-com.distribution_id
 }

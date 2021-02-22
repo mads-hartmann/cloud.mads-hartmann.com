@@ -56,6 +56,12 @@ module "example-mads-hartmann-com" {
   #
 }
 
+module "example-api-mads-hartmann-com" {
+  source = "../modules/api"
+  name   = "example-api.mads-hartmann.com"
+  s3_key = "index.js.zip"
+}
+
 module "library-mads-hartmann-com" {
   source              = "../modules/site"
   domain              = "library.mads-hartmann.com"
