@@ -97,8 +97,8 @@ resource "aws_cloudfront_distribution" "distribution" {
     }
   }
 
-  # Use the firewell we've created
-  web_acl_id = aws_wafv2_web_acl.web_acl.arn
+  # Use the firewell we've created if enable_waf is set to true
+  web_acl_id = var.enable_waf ? aws_wafv2_web_acl.web_acl[0].arn : null
 
   enabled         = true
   is_ipv6_enabled = true
@@ -358,6 +358,7 @@ resource "aws_lambda_function" "origin_response" {
 #
 
 resource "aws_wafv2_web_acl" "web_acl" {
+  count = var.enable_waf ? 1 : 0
   name        = local.hyphened_domain
   description = "WAF for ${var.domain}"
   scope       = "CLOUDFRONT"

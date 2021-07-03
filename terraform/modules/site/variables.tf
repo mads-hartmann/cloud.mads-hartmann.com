@@ -12,3 +12,8 @@ variable "route53_zone_id" {
   type        = string
   description = "The Zone ID to create the DNS record in"
 }
+
+variable "enable_waf" {
+  type = bool
+  description = "If true it will create a WAF and associate it with the CF distribution"
+}

@@ -20,7 +20,7 @@ A terraform module for creating a simple static site that's stored on S3 and ser
   The bucket is private, the CloudFront distribution has been configured to use a [Origin Access Identity (OAI)](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html) which has been grated read-only access to the bucket. Additionally, the bucket has been configured with [Amazon S3 Block Public Access](https://docs.aws.amazon.com/AmazonS3/latest/dev/access-control-block-public-access.html) so that the bucket or objects in it can't ever be made public.
 
 - It should have basic attack prevention  
-  A WAF Web ACL attached to CloudFront. The WAF has been configured to block IP addresses that have [identified as malicious actors and bots by Amazon threat intelligence (AWSManagedRulesAmazonIpReputationList)](https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-list.html#aws-managed-rule-groups-ip-rep), as well as a general rate-based rule based on IP addresses.
+  A WAF Web ACL attached to CloudFront. The WAF has been configured to block IP addresses that have [identified as malicious actors and bots by Amazon threat intelligence (AWSManagedRulesAmazonIpReputationList)](https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-list.html#aws-managed-rule-groups-ip-rep), as well as a general rate-based rule based on IP addresses. **NOTE:** I made the WAF optional through the `enable_waf` input variable as you pay per rule regardless of how much traffic you're receiving, see [pricing](https://aws.amazon.com/waf/pricing/).
 
 This will create the following resources:
 
@@ -53,6 +53,7 @@ module "example-mads-hartmann-com" {
   domain              = "example.mads-hartmann.com"
   acm_certificate_arn = "..."
   route53_zone_id     = "..."
+  enable_waf          = true
 
   providers = {
     aws = aws.us-east-1

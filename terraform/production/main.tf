@@ -36,6 +36,7 @@ module "example-mads-hartmann-com" {
   domain              = "example.mads-hartmann.com"
   acm_certificate_arn = local.acm_certificate_arn
   route53_zone_id     = local.route53_zone_id
+  enable_waf          = false
 
   providers = {
     aws = aws.us-east-1
@@ -61,6 +62,7 @@ module "library-mads-hartmann-com" {
   domain              = "library.mads-hartmann.com"
   acm_certificate_arn = local.acm_certificate_arn
   route53_zone_id     = local.route53_zone_id
+  enable_waf          = false
 
   providers = {
     aws = aws.us-east-1
@@ -72,6 +74,7 @@ module "computer-mads-hartmann-com" {
   domain              = "computer.mads-hartmann.com"
   acm_certificate_arn = local.acm_certificate_arn
   route53_zone_id     = local.route53_zone_id
+  enable_waf          = false
 
   providers = {
     aws = aws.us-east-1
@@ -83,6 +86,7 @@ module "links-mads-hartmann-com" {
   domain              = "links.mads-hartmann.com"
   acm_certificate_arn = local.acm_certificate_arn
   route53_zone_id     = local.route53_zone_id
+  enable_waf          = false
 
   providers = {
     aws = aws.us-east-1
@@ -94,6 +98,7 @@ module "blog-mads-hartmann-com" {
   domain              = "blog.mads-hartmann.com"
   acm_certificate_arn = local.acm_certificate_arn
   route53_zone_id     = local.route53_zone_id
+  enable_waf          = false
 
   providers = {
     aws = aws.us-east-1
