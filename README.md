@@ -8,9 +8,9 @@ To run terraform:
 
 ```sh
 cd terraform/production
-AWS_PROFILE=mads-personal terraform validate
-AWS_PROFILE=mads-personal terraform init
-AWS_PROFILE=mads-personal terraform plan
+terraform validate
+terraform init
+terraform plan
 ```
 
 How to upload and invalidate the CloudFront cache for the example site.

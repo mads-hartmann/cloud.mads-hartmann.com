@@ -1,0 +1,10 @@
+image:
+  file: .gitpod.Dockerfile
+
+tasks:
+  - command: echo Hello
+
+github:
+  prebuilds:
+    master: true
+    branches: true
