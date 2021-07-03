@@ -1,5 +1,5 @@
 
-FROM ubuntu:21.10
+FROM ubuntu:20.10
 
 RUN apt update \
     && apt install -y \
@@ -19,7 +19,7 @@ WORKDIR $HOME
 USER gitpod
 
 # Install Terraform
-ARG TERRAFORM_VERSION=1.0.1
+ENV TERRAFORM_VERSION=1.0.1
 RUN mkdir -p ~/.terraform \
     && cd ~/.terraform \
     && curl -fsSL -o terraform_linux_amd64.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" \
