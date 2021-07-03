@@ -8,6 +8,7 @@ output "example-mads-hartmann-com-deploy-access-key-id" {
 
 output "example-mads-hartmann-com-deploy-access-key-secret" {
   value = module.example-mads-hartmann-com.access_key.secret
+  sensitive = true
 }
 
 output "library-mads-hartmann-com-distribution-id" {
@@ -20,6 +21,7 @@ output "library-mads-hartmann-com-deploy-access-key-id" {
 
 output "library-mads-hartmann-com-deploy-access-key-secret" {
   value = module.library-mads-hartmann-com.access_key.secret
+  sensitive = true
 }
 
 output "computer-mads-hartmann-com-distribution-id" {
@@ -32,6 +34,7 @@ output "computer-mads-hartmann-com-deploy-access-key-id" {
 
 output "computer-mads-hartmann-com-deploy-access-key-secret" {
   value = module.computer-mads-hartmann-com.access_key.secret
+  sensitive = true
 }
 
 output "links-mads-hartmann-com-distribution-id" {
@@ -44,6 +47,7 @@ output "links-mads-hartmann-com-deploy-access-key-id" {
 
 output "links-mads-hartmann-com-deploy-access-key-secret" {
   value = module.links-mads-hartmann-com.access_key.secret
+  sensitive = true
 }
 
 output "blog-mads-hartmann-com-distribution-id" {
@@ -56,4 +60,5 @@ output "blog-mads-hartmann-com-deploy-access-key-id" {
 
 output "blog-mads-hartmann-com-deploy-access-key-secret" {
   value = module.blog-mads-hartmann-com.access_key.secret
+  sensitive = true
 }
