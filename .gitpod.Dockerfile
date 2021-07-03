@@ -1,13 +1,28 @@
 
-FROM gitpod/workspace-full-vnc:commit-3cb2f5c0c4722604a0919c9e1fc7d611d3c6a05b
+FROM ubuntu:21.10
 
+RUN apt update \
+    && apt install -y \
+        curl \
+        zip \
+        sudo \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/*
+
+# Gitpod user
+# Taken from https://github.com/gitpod-io/workspace-images/blob/master/base/Dockerfile
+RUN useradd -l -u 33333 -G sudo -md /home/gitpod -s /bin/bash -p gitpod gitpod \
+    # passwordless sudo for users in the 'sudo' group
+    && sed -i.bkp -e 's/%sudo\s\+ALL=(ALL\(:ALL\)\?)\s\+ALL/%sudo ALL=NOPASSWD:ALL/g' /etc/sudoers
+ENV HOME=/home/gitpod
+WORKDIR $HOME
 USER gitpod
 
 # Install Terraform
-ARG RELEASE_URL="https://releases.hashicorp.com/terraform/0.15.4/terraform_0.15.4_linux_amd64.zip"
+ARG TERRAFORM_VERSION=1.0.1
 RUN mkdir -p ~/.terraform \
     && cd ~/.terraform \
-    && curl -fsSL -o terraform_linux_amd64.zip ${RELEASE_URL} \
+    && curl -fsSL -o terraform_linux_amd64.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" \
     && unzip *.zip \
     && rm -f *.zip \
     && printf "terraform -install-autocomplete\n" >>~/.bashrc
